@@ -9,9 +9,12 @@ export class AzureBlobAdapter implements IStorage {
   private containerName: string;
 
   constructor(private configService: ConfigService) {
-    const azureConfig = this.configService.get('storage.azure');
-    this.blobServiceClient = BlobServiceClient.fromConnectionString(azureConfig.connectionString);
-    this.containerName = azureConfig.containerName;
+    const provider = this.configService.get<string>('storage.provider');
+    if (provider === 'azure') {
+      const azureConfig = this.configService.get('storage.azure');
+      this.blobServiceClient = BlobServiceClient.fromConnectionString(azureConfig.connectionString);
+      this.containerName = azureConfig.containerName;
+    }
   }
 
   async uploadFile(file: Express.Multer.File, containerName?: string): Promise<string> {

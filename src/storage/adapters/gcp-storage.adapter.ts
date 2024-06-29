@@ -9,12 +9,15 @@ export class GcpStorageAdapter implements IStorage {
   private bucket: string;
 
   constructor(private configService: ConfigService) {
-    const gcpConfig = this.configService.get('storage.gcp');
-    this.storage = new Storage({
-      projectId: gcpConfig.projectId,
-      keyFilename: gcpConfig.keyFilename,
-    });
-    this.bucket = gcpConfig.bucket;
+    const provider = this.configService.get<string>('storage.provider');
+    if (provider === 'gcp') {
+      const gcpConfig = this.configService.get('storage.gcp');
+      this.storage = new Storage({
+        projectId: gcpConfig.projectId,
+        keyFilename: gcpConfig.keyFilename,
+      });
+      this.bucket = gcpConfig.bucket;
+    }
   }
 
   async uploadFile(file: Express.Multer.File, bucket?: string): Promise<string> {

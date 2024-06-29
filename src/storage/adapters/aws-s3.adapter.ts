@@ -10,15 +10,18 @@ export class AwsS3Adapter implements IStorage {
   private bucket: string;
 
   constructor(private configService: ConfigService) {
-    const awsConfig = this.configService.get('storage.aws');
-    this.s3 = new S3Client({
-      region: awsConfig.region,
-      credentials: {
-        accessKeyId: awsConfig.accessKeyId,
-        secretAccessKey: awsConfig.secretAccessKey,
-      },
-    });
-    this.bucket = awsConfig.bucket;
+    const provider = this.configService.get<string>('storage.provider');
+    if (provider === 'aws') {
+      const awsConfig = this.configService.get('storage.aws');
+      this.s3 = new S3Client({
+        region: awsConfig.region,
+        credentials: {
+          accessKeyId: awsConfig.accessKeyId,
+          secretAccessKey: awsConfig.secretAccessKey,
+        },
+      });
+      this.bucket = awsConfig.bucket;
+    }
   }
 
   async uploadFile(file: Express.Multer.File, bucket?: string): Promise<string> {
