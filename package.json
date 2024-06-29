@@ -1,6 +1,6 @@
 {
   "name": "@atmus/nestjs-storage",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "NestJS storage library supporting AWS S3, Google Cloud Storage, Azure Blob, and local storage.",
   "author": "Atmus Tecnologia <contato@atmustecnologia.com.br>",
   "license": "MIT",
