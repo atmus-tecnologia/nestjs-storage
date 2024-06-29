@@ -1,0 +1,18 @@
+# source
+src
+tests
+index.ts
+package-lock.json
+tsconfig.json
+.prettierrc
+
+# misc
+.commitlintrc.json
+.release-it.json
+.eslintignore
+.eslintrc.js
+.prettierignore
+.prettierrc
+publish.sh
+.github
+jest.config.js
