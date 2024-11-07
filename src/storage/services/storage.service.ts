@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IStorage } from '../../common/interfaces/storage.interface';
+import { IDownloadedFile, IFile, IStorage } from '../../common/interfaces/storage.interface';
 import { AwsS3Adapter } from '../adapters/aws-s3.adapter';
 import { GcpStorageAdapter } from '../adapters/gcp-storage.adapter';
 import { AzureBlobAdapter } from '../adapters/azure-blob.adapter';
@@ -36,15 +36,15 @@ export class StorageService implements IStorage {
     }
   }
 
-  uploadFile(file: Express.Multer.File, bucket?: string): Promise<string> {
+  uploadFile(file: IFile, bucket?: string): Promise<string> {
     return this.storageAdapter.uploadFile(file, bucket);
   }
 
-  downloadFile(fileName: string, bucket?: string): Promise<Buffer> {
-    return this.storageAdapter.downloadFile(fileName, bucket);
+  downloadFile(pathToFile: string, bucket?: string): Promise<IDownloadedFile> {
+    return this.storageAdapter.downloadFile(pathToFile, bucket);
   }
 
-  deleteFile(fileName: string, bucket?: string): Promise<void> {
-    return this.storageAdapter.deleteFile(fileName, bucket);
+  deleteFile(pathToFile: string, bucket?: string): Promise<void> {
+    return this.storageAdapter.deleteFile(pathToFile, bucket);
   }
 }

@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ConfigService } from '@nestjs/config';
-import { IStorage } from '../../common/interfaces/storage.interface';
+import { IDownloadedFile, IFile, IStorage } from '../../common/interfaces/storage.interface';
+import * as path from 'path';
 
 @Injectable()
 export class AzureBlobAdapter implements IStorage {
@@ -17,24 +18,34 @@ export class AzureBlobAdapter implements IStorage {
     }
   }
 
-  async uploadFile(file: Express.Multer.File, containerName?: string): Promise<string> {
+  async uploadFile(file: IFile, containerName?: string): Promise<string> {
     const containerClient = this.blobServiceClient.getContainerClient(containerName || this.containerName);
-    const blockBlobClient = containerClient.getBlockBlobClient(file.originalname);
+    const blockBlobClient = containerClient.getBlockBlobClient(file.path);
     await blockBlobClient.uploadData(file.buffer);
     return blockBlobClient.url;
   }
 
-  async downloadFile(fileName: string, containerName?: string): Promise<Buffer> {
-    const containerClient = this.blobServiceClient.getContainerClient(containerName || this.containerName);
-    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
-    const downloadBlockBlobResponse = await blockBlobClient.download();
-    const downloaded = await this.streamToBuffer(downloadBlockBlobResponse.readableStreamBody);
-    return downloaded;
-  }
+  async downloadFile(pathToFile: string, containerName?: string): Promise<IDownloadedFile> {
+    try {
+        const containerClient = this.blobServiceClient.getContainerClient(containerName || this.containerName);
+        const blockBlobClient = containerClient.getBlockBlobClient(pathToFile);
+        const downloadBlockBlobResponse = await blockBlobClient.download();
+        const buffer = await this.streamToBuffer(downloadBlockBlobResponse.readableStreamBody);
 
-  async deleteFile(fileName: string, containerName?: string): Promise<void> {
+        return {
+            name: path.basename(pathToFile),
+            mimetype: downloadBlockBlobResponse.contentType || 'application/octet-stream',
+            buffer
+        };
+    } catch (error) {
+        console.error(`Error downloading file ${pathToFile}:`, error);
+        throw new Error('Failed to download file.');
+    }
+}
+
+  async deleteFile(pathToFile: string, containerName?: string): Promise<void> {
     const containerClient = this.blobServiceClient.getContainerClient(containerName || this.containerName);
-    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+    const blockBlobClient = containerClient.getBlockBlobClient(pathToFile);
     await blockBlobClient.delete();
   }
 

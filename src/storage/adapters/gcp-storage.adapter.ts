@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Storage } from '@google-cloud/storage';
 import { ConfigService } from '@nestjs/config';
-import { IStorage } from '../../common/interfaces/storage.interface';
+import { IDownloadedFile, IFile, IStorage } from '../../common/interfaces/storage.interface';
+import * as path from 'path';
 
 @Injectable()
 export class GcpStorageAdapter implements IStorage {
@@ -20,9 +21,9 @@ export class GcpStorageAdapter implements IStorage {
     }
   }
 
-  async uploadFile(file: Express.Multer.File, bucket?: string): Promise<string> {
+  async uploadFile(file: IFile, bucket?: string): Promise<string> {
     const bucketRef = this.storage.bucket(bucket || this.bucket);
-    const blob = bucketRef.file(file.originalname);
+    const blob = bucketRef.file(file.path);
     const blobStream = blob.createWriteStream();
 
     blobStream.end(file.buffer);
@@ -32,19 +33,30 @@ export class GcpStorageAdapter implements IStorage {
       blobStream.on('error', reject);
     });
 
-    return `gs://${bucket || this.bucket}/${file.originalname}`;
+    return `gs://${bucket || this.bucket}/${file.path}`;
   }
 
-  async downloadFile(fileName: string, bucket?: string): Promise<Buffer> {
-    const bucketRef = this.storage.bucket(bucket || this.bucket);
-    const fileRef = bucketRef.file(fileName);
-    const [fileBuffer] = await fileRef.download();
-    return fileBuffer;
-  }
+  async downloadFile(pathToFile: string, bucket?: string): Promise<IDownloadedFile> {
+    try {
+        const bucketRef = this.storage.bucket(bucket || this.bucket);
+        const fileRef = bucketRef.file(pathToFile);
+        const [fileBuffer] = await fileRef.download();
+        const [metadata] = await fileRef.getMetadata();
 
-  async deleteFile(fileName: string, bucket?: string): Promise<void> {
+        return {
+            name: path.basename(pathToFile),
+            mimetype: metadata.contentType || 'application/octet-stream',
+            buffer: fileBuffer
+        };
+    } catch (error) {
+        console.error(`Error downloading file ${pathToFile} from GCP:`, error);
+        throw new Error('Failed to download file.');
+    }
+}
+
+  async deleteFile(pathToFile: string, bucket?: string): Promise<void> {
     const bucketRef = this.storage.bucket(bucket || this.bucket);
-    const fileRef = bucketRef.file(fileName);
+    const fileRef = bucketRef.file(pathToFile);
     await fileRef.delete();
   }
 }

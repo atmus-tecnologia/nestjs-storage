@@ -1,6 +1,17 @@
+export interface IFile {
+  path: string;
+  mimetype: string;
+  buffer: Buffer;
+}
+
+export interface IDownloadedFile {
+  name: string;
+  mimetype: string;
+  buffer: Buffer;
+}
+
 export interface IStorage {
-    uploadFile(file: Express.Multer.File, bucket: string): Promise<string>;
-    downloadFile(fileName: string, bucket: string): Promise<Buffer>;
-    deleteFile(fileName: string, bucket: string): Promise<void>;
-  }
-  
+  uploadFile(file: IFile, bucket: string): Promise<string>;
+  downloadFile(filePath: string, bucket: string): Promise<IDownloadedFile>;
+  deleteFile(filePath: string, bucket: string): Promise<void>;
+}
