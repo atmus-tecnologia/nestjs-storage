@@ -24,13 +24,12 @@ export class GcpStorageAdapter implements IStorage {
   async uploadFile(file: IFile, bucket?: string): Promise<string> {
     const bucketRef = this.storage.bucket(bucket || this.bucket);
     const blob = bucketRef.file(file.path);
-    const blobStream = blob.createWriteStream();
-
-    blobStream.end(file.buffer);
+    const blobStream = blob.createWriteStream({ metadata: { contentType: file.mimetype } });
 
     await new Promise((resolve, reject) => {
       blobStream.on('finish', resolve);
       blobStream.on('error', reject);
+      blobStream.end(file.buffer);
     });
 
     return `gs://${bucket || this.bucket}/${file.path}`;

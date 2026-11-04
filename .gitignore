@@ -50,3 +50,8 @@ website/build/
 website/yarn.lock
 website/node_modules
 website/i18n/*
+
+*.tgz
+.env
+.env.*
+!.env.example

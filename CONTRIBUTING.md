@@ -1,31 +1,28 @@
 # Contributing
 
-1. [Fork it](https://help.github.com/articles/fork-a-repo/)
-2. Install dependencies (`npm install`)
-3. Create your feature branch (`git checkout -b my-new-feature`)
-4. Commit your changes (`git commit -am 'Added some feature'`)
-5. Test your changes (`npm run test`)
-6. Push to the branch (`git push origin my-new-feature`)
-7. [Create new Pull Request](https://help.github.com/articles/creating-a-pull-request/)
+Use Node.js 22.12+ and npm. Fork the repository, create a branch and run:
 
-## Testing
-
-We use [Jest](https://github.com/facebook/jest) to write tests. Run our test suite with this command:
-
-```
-npm run test
+```sh
+npm ci
+npm run check
 ```
 
-## Code Style
+`check` type-checks, runs offline regression tests, creates the npm archive and
+installs it in a temporary consumer. No API credentials or paid requests are needed.
+CI also runs on Node 22/24 and NestJS 11/12. Add a regression test for behavior changes.
+Describe changes and migration impact in CHANGELOG.md and MIGRATION.md.
+Never commit credentials or real customer data. Open a pull request with validation results.
 
-We use [Prettier](https://prettier.io/) and tslint to maintain code style and best practices.
-Please make sure your PR adheres to the guides by running:
+## Releases (maintainers)
 
-```
-npm run format
-```
+1. Update package.json and package-lock.json with `npm version <major|minor|patch> --no-git-tag-version`.
+2. Add a dated CHANGELOG entry and any required migration notes. Run `npm run check`.
+3. Commit, create `v<version>`, push the commit and tag, and create a GitHub Release.
+4. Publish locally with `npm login` and `npm publish --access public`, or run
+   **Publish to npm** with the existing tag after configuring npm Trusted Publishing.
 
-and
-```
-npm run lint
-```
+For Trusted Publishing, configure this GitHub organization/repository, workflow
+`publish.yml`, environment `npm` in the package's npm settings. The workflow uses
+OIDC and provenance; it does not store an npm token. Configure the GitHub `npm`
+environment before running it. Creating a GitHub Release alone does not publish to npm.
+Verify `npm view <package> version` after publication; never overwrite published versions.

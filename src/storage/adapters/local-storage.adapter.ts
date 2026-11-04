@@ -1,55 +1,53 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as util from 'util';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
 import { IDownloadedFile, IFile, IStorage } from '../../common/interfaces/storage.interface';
 
 @Injectable()
 export class LocalStorageAdapter implements IStorage {
   private readonly baseDirectory: string;
-  private readonly _writeFile = util.promisify(fs.writeFile);
-  private readonly _readFile = util.promisify(fs.readFile);
-  private readonly _deleteFile = util.promisify(fs.unlink);
-  private readonly _mkdir = util.promisify(fs.mkdir);
 
-  constructor(private configService: ConfigService) {
-    this.baseDirectory = this.configService.get<string>('storage.local.directory');
-    if (!fs.existsSync(this.baseDirectory)) {
-      fs.mkdirSync(this.baseDirectory, { recursive: true });
+  constructor(config: ConfigService) {
+    this.baseDirectory = path.resolve(config.get<string>('storage.local.directory') || './uploads');
+  }
+
+  private async resolveFile(key: string): Promise<string> {
+    if (!key || key.includes('\0') || path.isAbsolute(key) || /^[a-z]:/i.test(key) || key.includes('\\')) {
+      throw new Error('Storage key must be a relative path using forward slashes');
     }
+    const target = path.resolve(this.baseDirectory, key);
+    const relative = path.relative(this.baseDirectory, target);
+    if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      throw new Error('Storage key must stay inside the storage directory');
+    }
+    await fs.mkdir(this.baseDirectory, { recursive: true });
+    // Reject links/junctions in existing descendants, including the target file.
+    let current = this.baseDirectory;
+    for (const part of relative.split(path.sep)) {
+      current = path.join(current, part);
+      try {
+        if ((await fs.lstat(current)).isSymbolicLink()) throw new Error('Storage keys cannot traverse symbolic links');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') break;
+        throw error;
+      }
+    }
+    return target;
   }
 
   async uploadFile(file: IFile): Promise<string> {
-    const filePath = path.join(this.baseDirectory, file.path);
-    const dirPath = path.dirname(filePath);
-
-    // ** Check if the directory path exists, if not, create it
-    if (!fs.existsSync(dirPath)) await this._mkdir(dirPath, { recursive: true });
-
-    await this._writeFile(filePath, file.buffer);
-    return filePath;
+    const target = await this.resolveFile(file.path);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, file.buffer);
+    return target;
   }
 
-  async downloadFile(pathToFile: string): Promise<IDownloadedFile> {
-    try {
-        const filePath = path.join(this.baseDirectory, pathToFile);
-        const buffer = await this._readFile(filePath);
-        const mimetype = require('mime-types').lookup(pathToFile) || 'application/octet-stream';
-
-        return {
-            name: path.basename(pathToFile),
-            mimetype,
-            buffer
-        };
-    } catch (error) {
-        console.error(`Error reading local file ${pathToFile}:`, error);
-        throw new Error('Failed to download file.');
-    }
-}
-
-  async deleteFile(pathToFile: string): Promise<void> {
-    const filePath = path.join(this.baseDirectory, pathToFile);
-    await this._deleteFile(filePath);
+  async downloadFile(key: string): Promise<IDownloadedFile> {
+    const buffer = await fs.readFile(await this.resolveFile(key));
+    const mimetype = require('mime-types').lookup(key) || 'application/octet-stream';
+    return { name: path.basename(key), mimetype, buffer };
   }
+
+  async deleteFile(key: string): Promise<void> { await fs.unlink(await this.resolveFile(key)); }
 }

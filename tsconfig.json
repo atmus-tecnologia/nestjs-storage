@@ -1,17 +1,28 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
     "declaration": true,
-    "removeComments": true,
+    "sourceMap": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es6",
-    "sourceMap": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": "./",
-    "noLib": false
+    "types": [
+      "node"
+    ],
+    "inlineSources": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "example"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test"
+  ]
 }

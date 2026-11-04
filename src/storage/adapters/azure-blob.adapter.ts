@@ -21,7 +21,7 @@ export class AzureBlobAdapter implements IStorage {
   async uploadFile(file: IFile, containerName?: string): Promise<string> {
     const containerClient = this.blobServiceClient.getContainerClient(containerName || this.containerName);
     const blockBlobClient = containerClient.getBlockBlobClient(file.path);
-    await blockBlobClient.uploadData(file.buffer);
+    await blockBlobClient.uploadData(file.buffer, { blobHTTPHeaders: { blobContentType: file.mimetype } });
     return blockBlobClient.url;
   }
 
@@ -51,7 +51,7 @@ export class AzureBlobAdapter implements IStorage {
 
   private async streamToBuffer(readableStream): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const chunks = [];
+      const chunks: Buffer[] = [];
       readableStream.on("data", (data) => {
         chunks.push(data instanceof Buffer ? data : Buffer.from(data));
       });

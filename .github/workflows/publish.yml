@@ -1,0 +1,30 @@
+name: Publish to npm
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag (for example v1.0.0)'
+        required: true
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: node -e "if ('v' + require('./package.json').version !== process.env.RELEASE_TAG) process.exit(1)"
+      - run: npm ci
+      - run: npm run check
+      - run: npm publish --access public --provenance

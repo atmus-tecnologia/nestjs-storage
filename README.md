@@ -1,168 +1,94 @@
-# NestJS Storage
+# @atmus/nestjs-storage
 
-NestJS Storage é um módulo NestJS que fornece uma interface unificada para manipular operações de armazenamento de arquivos em vários provedores, incluindo AWS S3, Google Cloud Storage, Azure Blob Storage e armazenamento local.
+A unified NestJS interface for file uploads, downloads and deletion using local files, AWS S3, Google Cloud Storage or Azure Blob Storage.
 
-## Features
+## Installation
 
-- Upload de arquivos para AWS S3, Google Cloud Storage, Azure Blob Storage ou sistema de arquivos local.
-- Download de arquivos desses provedores de armazenamento.
-- Exclusão de arquivos desses provedores de armazenamento.
-- Visualização de arquivos diretamente no navegador.
-
-## Instalação
-
-Instale a biblioteca e suas dependências:
-
-```bash
-npm install @atmus/nestjs-storage
+```sh
+npm install @atmus/nestjs-storage @nestjs/common @nestjs/config reflect-metadata rxjs
 ```
 
-## Configuração
+Use NestJS 11/12 and @nestjs/config 4/12. See [MIGRATION.md](MIGRATION.md) before upgrading from 1.x.
 
-Configure as definições do provedor de armazenamento usando variáveis de ambiente. Aqui está um exemplo de arquivo `.env`:
+## Configuration
 
-```env
-STORAGE_PROVIDER=local
-
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-AWS_REGION=your_aws_region
-AWS_BUCKET=your_aws_bucket
-
-GCP_PROJECT_ID=your_gcp_project_id
-GCP_KEY_FILENAME=path_to_your_gcp_keyfile.json
-GCP_BUCKET=your_gcp_bucket
-
-AZURE_CONNECTION_STRING=your_azure_connection_string
-AZURE_CONTAINER_NAME=your_azure_container_name
-
-LOCAL_STORAGE_DIRECTORY=./uploads
-```
-
-## Uso
-
-### Importando o Módulo
-
-Importe o `StorageModule` no módulo raiz da sua aplicação NestJS:
-
-```typescript
+```ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { StorageModule } from '@atmus/nestjs-storage';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    StorageModule,
-  ],
+  imports: [ConfigModule.forRoot(), StorageModule],
 })
 export class AppModule {}
 ```
 
-### Usando o Storage Service
+Set only the environment variables for your selected provider:
 
-Use o `StorageService` em seus controladores ou serviços para manipular operações de arquivos:
+| STORAGE_PROVIDER | Configuration |
+| --- | --- |
+| local (default) | LOCAL_STORAGE_DIRECTORY (default ./uploads) |
+| aws | AWS_REGION, AWS_BUCKET; optional AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY, otherwise default SDK credential chain |
+| gcp | GCP_BUCKET; optional GCP_PROJECT_ID and GCP_KEY_FILENAME, otherwise application default credentials |
+| azure | AZURE_CONNECTION_STRING, AZURE_CONTAINER_NAME |
 
-```typescript
-import { Controller, Post, Get, Delete, Param, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { StorageService } from '@atmus/nestjs-storage';
-import { Response } from 'express';
+Provision buckets/containers before use. The library does not create cloud buckets, set ACLs or serve HTTP routes. Keep secrets out of source control.
 
-@Controller('files')
-export class AppController {
-  constructor(private readonly storageService: StorageService) {}
+Example local environment:
 
-  @Post()
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    const filePath = await this.storageService.uploadFile(file);
-    return { filePath };
-  }
-
-  @Get(':fileName/download')
-  async downloadFile(@Param('fileName') fileName: string, @Res() res: Response) {
-    const fileBuffer = await this.storageService.downloadFile(fileName);
-    res.set({
-      'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${fileName}"`,
-    });
-    res.send(fileBuffer);
-  }
-
-  @Get(':fileName')
-  async viewFile(@Param('fileName') fileName: string, @Res() res: Response) {
-    const fileBuffer = await this.storageService.downloadFile(fileName);
-    const mimeType = mime.lookup(fileName) || 'application/octet-stream';
-    res.set({
-      'Content-Type': mimeType,
-      'Content-Disposition': `inline; filename="${fileName}"`,
-    });
-    res.send(fileBuffer);
-  }
-
-  @Delete(':fileName')
-  async deleteFile(@Param('fileName') fileName: string) {
-    await this.storageService.deleteFile(fileName);
-    return { message: 'File deleted successfully' };
-  }
-}
-```
-
-## Provedores de Armazenamento
-
-### AWS S3
-
-Certifique-se de ter as seguintes variáveis de ambiente configuradas:
-
-```env
-STORAGE_PROVIDER=aws
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-AWS_REGION=your_aws_region
-AWS_BUCKET=your_aws_bucket
-```
-
-### Google Cloud Storage
-
-Certifique-se de ter as seguintes variáveis de ambiente configuradas:
-
-```env
-STORAGE_PROVIDER=gcp
-GCP_PROJECT_ID=your_gcp_project_id
-GCP_KEY_FILENAME=path_to_your_gcp_keyfile.json
-GCP_BUCKET=your_gcp_bucket
-```
-
-### Azure Blob Storage
-
-Certifique-se de ter as seguintes variáveis de ambiente configuradas:
-
-```env
-STORAGE_PROVIDER=azure
-AZURE_CONNECTION_STRING=your_azure_connection_string
-AZURE_CONTAINER_NAME=your_azure_container_name
-```
-
-### Sistema de Arquivos Local
-
-Certifique-se de ter as seguintes variáveis de ambiente configuradas:
-
-```env
+```dotenv
 STORAGE_PROVIDER=local
 LOCAL_STORAGE_DIRECTORY=./uploads
 ```
 
-## Licença
+## Usage
 
-Este projeto está licenciado sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+```ts
+import { Injectable } from '@nestjs/common';
+import { StorageService } from '@atmus/nestjs-storage';
 
-## Contribuição
+@Injectable()
+export class FilesService {
+  constructor(private readonly storage: StorageService) {}
 
-Contribuições são bem-vindas! Por favor, abra uma issue ou envie um pull request para quaisquer alterações.
+  async example() {
+    const key = 'reports/example.txt';
+    await this.storage.uploadFile({
+      path: key,
+      mimetype: 'text/plain',
+      buffer: Buffer.from('Hello'),
+    });
+    const file = await this.storage.downloadFile(key);
+    await this.storage.deleteFile(key);
+    return file;
+  }
+}
+```
 
-## Autor
+| Method | Result |
+| --- | --- |
+| uploadFile(file: IFile, bucket?: string) | Promise<string>: local absolute path, S3/Azure URL or gs:// URI |
+| downloadFile(key: string, bucket?: string) | Promise<IDownloadedFile>: name, mimetype, buffer |
+| deleteFile(key: string, bucket?: string) | Promise<void> |
 
-Atmus Tecnologia - [atmustecnologia.com.br](https://atmustecnologia.com.br).
+The optional second argument overrides the cloud bucket/container; local storage ignores it. Always use the relative object key for subsequent operations, not the upload result. Returned URLs do not guarantee anonymous access; S3 URLs are not presigned.
+
+Local keys use forward slashes and must stay within the configured directory. Absolute paths, traversal and existing symbolic link/junction descendants are rejected. Keep the directory under application ownership; checks do not protect against another local process racing to replace directories. Local missing-file errors retain their original code, such as ENOENT.
+
+Uploads and downloads are buffered in memory; apply file-size limits in your application. Validate permissions and MIME types before accepting untrusted uploads. Cloud downloads retain the existing generic download-error behavior; upload/delete errors propagate from the SDK.
+
+Public exports: StorageModule, StorageService, IStorage, IFile, IDownloadedFile, storageConfig, AwsS3Adapter, GcpStorageAdapter, AzureBlobAdapter and LocalStorageAdapter.
+
+## Compatibility and development
+
+Requires **Node.js 22.12+**, **NestJS 11 or 12**, RxJS 7.8+ and reflect-metadata 0.2.2+.
+The package ships CommonJS JavaScript, TypeScript declarations and source maps. Modern Node supports loading NestJS 12's ESM dependencies; use a compatible NodeNext/Node20 TypeScript configuration in consuming applications.
+
+```sh
+npm ci
+npm run check
+```
+
+Checks include offline regression tests and installation of the actual npm archive in an isolated consumer. CI covers Node 22/24 and Nest 11/12. No real API credentials are used by the test suite. Live provider behavior must be validated in your application.
+
+See [CHANGELOG.md](CHANGELOG.md), [MIGRATION.md](MIGRATION.md) and [CONTRIBUTING.md](CONTRIBUTING.md) for release history, breaking changes and publication instructions. Licensed under [MIT](LICENSE).

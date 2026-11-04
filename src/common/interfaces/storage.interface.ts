@@ -11,7 +11,7 @@ export interface IDownloadedFile {
 }
 
 export interface IStorage {
-  uploadFile(file: IFile, bucket: string): Promise<string>;
-  downloadFile(filePath: string, bucket: string): Promise<IDownloadedFile>;
-  deleteFile(filePath: string, bucket: string): Promise<void>;
+  uploadFile(file: IFile, bucket?: string): Promise<string>;
+  downloadFile(filePath: string, bucket?: string): Promise<IDownloadedFile>;
+  deleteFile(filePath: string, bucket?: string): Promise<void>;
 }

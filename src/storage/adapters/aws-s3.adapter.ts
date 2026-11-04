@@ -16,10 +16,10 @@ export class AwsS3Adapter implements IStorage {
       const awsConfig = this.configService.get('storage.aws');
       this.s3 = new S3Client({
         region: awsConfig.region,
-        credentials: {
+        credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
           accessKeyId: awsConfig.accessKeyId,
           secretAccessKey: awsConfig.secretAccessKey,
-        },
+        } : undefined,
       });
       this.bucket = awsConfig.bucket;
     }
@@ -30,6 +30,7 @@ export class AwsS3Adapter implements IStorage {
       Bucket: bucket || this.bucket,
       Key: file.path,
       Body: file.buffer,
+      ContentType: file.mimetype,
     };
     await this.s3.send(new PutObjectCommand(params));
     return `https://${params.Bucket}.s3.amazonaws.com/${params.Key}`;
