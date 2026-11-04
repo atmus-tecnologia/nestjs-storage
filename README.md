@@ -4,10 +4,8 @@ A unified NestJS interface for file uploads, downloads and deletion using local 
 
 ## Installation
 
-Version 2.0.0 is distributed through GitHub Releases. It has not been published to npm yet; use the archive URL below.
-
 ```sh
-npm install https://github.com/atmus-tecnologia/nestjs-storage/releases/download/v2.0.0/atmus-nestjs-storage-2.0.0.tgz @nestjs/common @nestjs/config reflect-metadata rxjs
+npm install @atmus/nestjs-storage@2.0.0 @nestjs/common @nestjs/config reflect-metadata rxjs
 ```
 
 Use NestJS 11/12 and @nestjs/config 4/12. See [MIGRATION.md](MIGRATION.md) before upgrading from 1.x.
